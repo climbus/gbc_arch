@@ -28,6 +28,9 @@ FAT_PATTERN = re.compile(r"[^A-Za-z0-9 \$\%\-\_\!\(\)\{\}\^\#\&]")
 @click.argument("dest_path")
 def move_games(source_path, dest_path):
     p = Path(source_path)
+    if not p.exists():
+        raise click.ClickException("SOURCE PATH does not exists")
+
     for fle in p.glob("**/*.zip"):
         with ZipFile(fle) as z:
             game, year, publisher = get_metadata(z)
