@@ -4,11 +4,14 @@ from typing import List, Tuple
 from zipfile import Path as ZipPath
 from zipfile import ZipFile
 
+import click
 from unidecode import unidecode
 
 ABC_FOLDER_NAME = "ABC"
 PUBLISHER_FOLDER_NAME = "Publishers"
 YEAR_FOLDER_NAME = "Years"
+INFO_FILE_NAME = "VERSION.NFO"
+SOURCE_ENCONDING = "cp1250"
 FULL_YEAR_LENGTH = 4
 
 SOURCE = "/mnt/d/Games"
@@ -20,8 +23,11 @@ PUBLISHER_PATTERN = r"Published:\s+([\d?]+)\s(.*)"
 FAT_PATTERN = re.compile(r"[^A-Za-z0-9 \$\%\-\_\!\(\)\{\}\^\#\&]")
 
 
-def move_games():
-    p = Path(SOURCE)
+@click.command()
+@click.argument("source_path")
+@click.argument("dest_path")
+def move_games(source_path, dest_path):
+    p = Path(source_path)
     for fle in p.glob("**/*.zip"):
         with ZipFile(fle) as z:
             game, year, publisher = get_metadata(z)
@@ -29,18 +35,16 @@ def move_games():
 
             name_prefix = extract_prefix(game)
 
-            dest_path_abc = prepare_dest_dir(get_abc_name(name_prefix), ABC_FOLDER_NAME)
+            dest_path_abc = prepare_dest_dir(
+                get_abc_name(name_prefix), ABC_FOLDER_NAME, dest_path
+            )
             dest_with_pub = prepare_dest_dir(
-                publisher,
-                PUBLISHER_FOLDER_NAME,
+                publisher, PUBLISHER_FOLDER_NAME, dest_path
             )
-            dest_with_year = prepare_dest_dir(
-                year,
-                YEAR_FOLDER_NAME,
-            )
+            dest_with_year = prepare_dest_dir(year, YEAR_FOLDER_NAME, dest_path)
 
             for zip_fle in ZipPath(z).iterdir():
-                if zip_fle.name.endswith("NFO"):
+                if zip_fle.name == INFO_FILE_NAME:
                     continue
 
                 extract_to(z, zip_fle, dest_path_abc, name_with_year)
@@ -62,8 +66,8 @@ def extract_to(z, zip_fle, dest_path, name):
     )
 
 
-def prepare_dest_dir(folder_name, parent):
-    parent_dir = Path(DEST) / parent.strip()
+def prepare_dest_dir(folder_name, parent, root):
+    parent_dir = Path(root) / parent.strip()
     if not parent_dir.exists():
         parent_dir.mkdir()
     dest_path = parent_dir / folder_name.strip()
@@ -87,8 +91,8 @@ def extract_prefix(game):
 
 
 def get_metadata(z) -> Tuple[str, str, str]:
-    info = z.open("VERSION.NFO", "r").read()
-    str_info = info.decode("cp1250")
+    info = z.open(INFO_FILE_NAME, "r").read()
+    str_info = info.decode(SOURCE_ENCONDING)
     game = _extract_val(NAME_PATTERN, str_info)[0]
     year, publisher = _extract_val(PUBLISHER_PATTERN, str_info)
     return game, year, publisher
