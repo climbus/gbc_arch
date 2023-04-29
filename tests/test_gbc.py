@@ -38,5 +38,13 @@ def test_source_path_does_not_exists(tmp_path: Path):
     assert next(tmp_path.glob("**/*"), None) is None
 
 
+def test_dest_path_does_not_exists(tmp_path: Path):
+    runner = CliRunner()
+    result = runner.invoke(move_games, [str(tmp_path), "bad_path"])
+
+    assert result.exit_code == 1
+    assert "DESTINATION PATH does not exists" in result.output
+
+
 def dir_content(tmp_path):
     return list(str(p.relative_to(tmp_path)) for p in tmp_path.glob("**/*"))

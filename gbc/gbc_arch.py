@@ -27,11 +27,14 @@ FAT_PATTERN = re.compile(r"[^A-Za-z0-9 \$\%\-\_\!\(\)\{\}\^\#\&]")
 @click.argument("source_path")
 @click.argument("dest_path")
 def move_games(source_path, dest_path):
-    p = Path(source_path)
-    if not p.exists():
+    source = Path(source_path)
+    if not source.exists():
         raise click.ClickException("SOURCE PATH does not exists")
+    dest = Path(dest_path)
+    if not dest.exists():
+        raise click.ClickException("DESTINATION PATH does not exists")
 
-    for fle in p.glob("**/*.zip"):
+    for fle in source.glob("**/*.zip"):
         with ZipFile(fle) as z:
             game, year, publisher = get_metadata(z)
             name_with_year = f"{game} ({year})" if _is_full_year(year) else game
@@ -39,11 +42,9 @@ def move_games(source_path, dest_path):
             name_prefix = extract_prefix(game)
 
             dest_path_abc = prepare_dest_dir(
-                get_abc_name(name_prefix), ABC_FOLDER_NAME, dest_path
+                get_abc_name(name_prefix), ABC_FOLDER_NAME, dest
             )
-            dest_with_pub = prepare_dest_dir(
-                publisher, PUBLISHER_FOLDER_NAME, dest_path
-            )
+            dest_with_pub = prepare_dest_dir(publisher, PUBLISHER_FOLDER_NAME, dest)
 
             for zip_fle in ZipPath(z).iterdir():
                 if zip_fle.name == INFO_FILE_NAME:
@@ -53,7 +54,7 @@ def move_games(source_path, dest_path):
                 extract_to(z, zip_fle, dest_with_pub, name_with_year)
 
                 if _is_full_year(year):
-                    dest_with_year = prepare_dest_dir(year, YEAR_FOLDER_NAME, dest_path)
+                    dest_with_year = prepare_dest_dir(year, YEAR_FOLDER_NAME, dest)
                     extract_to(z, zip_fle, dest_with_year, game)
 
 
@@ -70,7 +71,7 @@ def extract_to(z, zip_fle, dest_path, name):
 
 
 def prepare_dest_dir(folder_name, parent, root):
-    parent_dir = Path(root) / parent.strip()
+    parent_dir = root / parent.strip()
     if not parent_dir.exists():
         parent_dir.mkdir()
     dest_path = parent_dir / folder_name.strip()
