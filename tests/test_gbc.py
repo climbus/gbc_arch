@@ -17,10 +17,14 @@ def test_move_games(tmp_path: Path):
         "Years",
         "Publishers",
         "ABC/ba",
+        "ABC/ea",
         "ABC/ba/Battle The (1986).T64",
+        "ABC/ea/Eaglehunt.T64",
         "Years/1986",
         "Years/1986/Battle The.T64",
+        "Publishers/(Not Published)",
         "Publishers/Argus Specialist Publications LtdComputer Gamer",
+        "Publishers/(Not Published)/Eaglehunt.T64",
         "Publishers/Argus Specialist Publications LtdComputer Gamer/Battle The (1986).T64",
     ]
 
