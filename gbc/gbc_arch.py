@@ -31,7 +31,7 @@ def move_games(source_path, dest_path):
     for fle in p.glob("**/*.zip"):
         with ZipFile(fle) as z:
             game, year, publisher = get_metadata(z)
-            name_with_year = f"{game} ({year})" if year.isdigit() else game
+            name_with_year = f"{game} ({year})" if _is_full_year(year) else game
 
             name_prefix = extract_prefix(game)
 
@@ -41,7 +41,6 @@ def move_games(source_path, dest_path):
             dest_with_pub = prepare_dest_dir(
                 publisher, PUBLISHER_FOLDER_NAME, dest_path
             )
-            dest_with_year = prepare_dest_dir(year, YEAR_FOLDER_NAME, dest_path)
 
             for zip_fle in ZipPath(z).iterdir():
                 if zip_fle.name == INFO_FILE_NAME:
@@ -51,6 +50,7 @@ def move_games(source_path, dest_path):
                 extract_to(z, zip_fle, dest_with_pub, name_with_year)
 
                 if _is_full_year(year):
+                    dest_with_year = prepare_dest_dir(year, YEAR_FOLDER_NAME, dest_path)
                     extract_to(z, zip_fle, dest_with_year, game)
 
 
