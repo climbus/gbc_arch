@@ -4,7 +4,12 @@ from typing import List, Tuple
 from zipfile import Path as ZipPath
 from zipfile import ZipFile
 
-import unidecode
+from unidecode import unidecode
+
+ABC_FOLDER_NAME = "ABC"
+PUBLISHER_FOLDER_NAME = "Publishers"
+YEAR_FOLDER_NAME = "Years"
+FULL_YEAR_LENGTH = 4
 
 SOURCE = "/mnt/d/Games"
 DEST = "/mnt/c/opt/gbc/"
@@ -12,46 +17,48 @@ DEST = "/mnt/c/opt/gbc/"
 NAME_PATTERN = r"Name:\s+(.*)\r"
 PUBLISHER_PATTERN = r"Published:\s+([\d?]+)\s(.*)"
 
+FAT_PATTERN = re.compile(r"[^A-Za-z0-9 \$\%\-\_\!\(\)\{\}\^\#\&]")
+
 
 def move_games():
     p = Path(SOURCE)
-    for dr in p.iterdir():
-        if dr.is_dir():
-            for fle in dr.iterdir():
-                if fle.name.endswith(".zip"):
-                    with ZipFile(fle) as z:
-                        game, year, publisher = get_metadata(z)
-                        name_with_year = f"{game} ({year})" if year.isdigit() else game
-                        zpath = ZipPath(z)
-                        for zip_fle in zpath.iterdir():
-                            if not zip_fle.name.endswith("NFO"):
-                                name_prefix = extract_prefix(game)
-                                dest_path_abc = prepare_dest_dir(
-                                    get_abc_name(name_prefix), "ABC"
-                                )
-                                extract_to(z, zip_fle, dest_path_abc, name_with_year)
+    for fle in p.glob("**/*.zip"):
+        with ZipFile(fle) as z:
+            game, year, publisher = get_metadata(z)
+            name_with_year = f"{game} ({year})" if year.isdigit() else game
 
-                                dest_with_pub = prepare_dest_dir(
-                                    publisher.replace("[", "")
-                                    .replace("]", "")
-                                    .replace(".", ""),
-                                    "Publishers",
-                                )
-                                extract_to(z, zip_fle, dest_with_pub, name_with_year)
+            name_prefix = extract_prefix(game)
 
-                                if year.isdigit():
-                                    dest_with_year = prepare_dest_dir(
-                                        year,
-                                        "Years",
-                                    )
-                                    extract_to(z, zip_fle, dest_with_year, game)
+            dest_path_abc = prepare_dest_dir(get_abc_name(name_prefix), ABC_FOLDER_NAME)
+            dest_with_pub = prepare_dest_dir(
+                publisher,
+                PUBLISHER_FOLDER_NAME,
+            )
+            dest_with_year = prepare_dest_dir(
+                year,
+                YEAR_FOLDER_NAME,
+            )
+
+            for zip_fle in ZipPath(z).iterdir():
+                if zip_fle.name.endswith("NFO"):
+                    continue
+
+                extract_to(z, zip_fle, dest_path_abc, name_with_year)
+                extract_to(z, zip_fle, dest_with_pub, name_with_year)
+
+                if _is_full_year(year):
+                    extract_to(z, zip_fle, dest_with_year, game)
+
+
+def _is_full_year(year):
+    return year.isdigit() and len(year) == FULL_YEAR_LENGTH
 
 
 def extract_to(z, zip_fle, dest_path, name):
     extracted = z.extract(zip_fle.name, dest_path)
     extracted_path = Path(extracted)
     extracted_path.rename(
-        extracted_path.parent / (name.replace("/", "") + extracted_path.suffix).strip()
+        extracted_path.parent / (name + extracted_path.suffix).strip()
     )
 
 
@@ -59,7 +66,7 @@ def prepare_dest_dir(folder_name, parent):
     parent_dir = Path(DEST) / parent.strip()
     if not parent_dir.exists():
         parent_dir.mkdir()
-    dest_path = parent_dir / folder_name.replace("/", " ").replace("\\", " ").strip()
+    dest_path = parent_dir / folder_name.strip()
 
     if not dest_path.exists():
         dest_path.mkdir()
@@ -90,7 +97,7 @@ def get_metadata(z) -> Tuple[str, str, str]:
 def _extract_val(pattern, txt) -> List[str]:
     res = re.search(pattern, txt)
     if res:
-        val = [unidecode.unidecode(v).replace("\r", "") for v in res.groups()]
+        val = [FAT_PATTERN.sub("", unidecode(v)) for v in res.groups()]
     else:
         val = []
     return val
