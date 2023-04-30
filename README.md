@@ -14,7 +14,7 @@ pip install -r requirements.txt
 Usage
 -----
 
-Mount Game Base Disk 1 iso ([(link) https://www.lemon64.com/forum/viewtopic.php?t=79730]), prepare empty folder and run commamd:
+Mount Game Base Disk 1 iso [(link)](https://www.lemon64.com/forum/viewtopic.php?t=79730]), prepare empty folder and run commamd:
 
 ```bash
 python gbc/gbc_arch.py [source] [destination]
